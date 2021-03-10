@@ -1,0 +1,201 @@
+IDENTIFICATION DIVISION.
+       PROGRAM-ID. CH11PG03.
+      ****************************************************************
+
+       ENVIRONMENT DIVISION.              
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+                   
+               SELECT EMP-FILE ASSIGN TO 'D:\NAIDU\MOD2O'
+               ORGANIZATION IS SEQUENTIAL
+               FILE STATUS IS W01-EMP-STAT.
+               
+                SELECT MASTER-FILE ASSIGN TO 'D:\FILES\ACCMAST3'  
+               RECORD KEY IS  LOC-CITY       
+               ORGANIZATION IS INDEXED
+               ACCESS IS RANDOM
+               FILE STATUS IS W01-ACCT-STAT. 
+              
+               SELECT REPORT-FILE ASSIGN TO 'KEYFOLDER2'
+               ORGANIZATION IS SEQUENTIAL
+               FILE STATUS IS W05-REP-FS.
+       DATA DIVISION.
+       FILE SECTION.
+       
+       FD  EMP-FILE
+            LABEL RECORDS ARE STANDARD 
+            BLOCK CONTAINS 0 RECORDS
+            RECORD CONTAINS 80 CHARACTERS.
+       01 EMP-REC.
+          05 EMP-CODE PIC   9(06).
+          05 EMP-NAME PIC   X(15).
+          05 EMP-GROUP PIC  A(10).
+          05 EMP-DESG PIC   A(15).                
+          05 EMP-LOC PIC    A(03).
+          05 FILLER PIC      X(31).
+       FD MASTER-FILE
+            LABEL RECORDS ARE STANDARD 
+            BLOCK CONTAINS 0 RECORDS
+            RECORD CONTAINS 80 CHARACTERS.
+       01  MASTER-REC.                                                         
+    
+           05  LOC-CODE    PIC A(03).                                   
+           05  LOC-ADDRESS1 PIC X(30).                                          
+           05  LOC-ADDRESS2     PIC X(30).
+           05  LOC-CITY     PIC A(15).
+           05  FILLER              PIC X(02).  
+       FD REPORT-FILE
+           LABEL RECORDS OMITTED
+           RECORD CONTAINS 80 CHARACTERS.
+       01 REPORT-REC PIC X(80).
+       WORKING-STORAGE SECTION.
+       01 W01-EMP-STAT        PIC X(02).                              
+       01 W01-ACCT-STAT     PIC X(02).
+       01 W05-REP-FS PIC X(02).
+       01 CITY PIC A(15) .
+       
+      * 01 S-GRP PIC A(10).
+       01 READ1.
+           05 W02-FOUND PIC X(01) VALUE 'Y'.
+           88 88-FOUND VALUE 'N'.
+       01 READ2.
+           05 W01-EOF PIC X(01) VALUE 'Y'.
+           88 88-EOF VALUE 'N'.    
+       01 T-LOC-CODE PIC A(03).
+       01 TEMP-GRP PIC X(10).  
+       
+       01 H01-HEAD.
+             05 FILLER PIC X(20) VALUE SPACES.
+             05 FILLER PIC X(30) VALUE 'CAPGEMINI SOLUTIONS'.
+       01 H02-HEAD.
+             05 FILLER PIC X(20) VALUE 'GROUP WISE LIST : '.
+             05  T-CODE PIC A(03).
+       01 H03-HEAD.
+             05 FILLER PIC X(10) VALUE 'GROUP  : '.
+             05 S-GRP PIC  A(10).      
+             
+       01 H031-LINE.
+             05 FILLER PIC X(80) VALUE ALL '-'.
+       01 H04-HEAD.
+             05 FILLER PIC X(08) VALUE 'EMP CODE'.
+             05 FILLER PIC X(06) VALUE SPACES.
+             05 FILLER PIC X(06) VALUE 'NAME'.
+             05 FILLER PIC X(06) VALUE SPACES.       
+             05 FILLER PIC X(11) VALUE 'DESIGNATION'.
+             05 FILLER PIC X(06) VALUE SPACES. 
+            
+       01 H05-HEAD.
+             05 EMPCODE1 PIC 9(06).
+             05 FILLER PIC X(06) VALUE SPACES.
+             05 EMPNAME1 PIC X(15).
+             05 FILLER PIC X(06) VALUE SPACES.
+             05 EMPDESIGN PIC X(15).
+       
+       PROCEDURE DIVISION.
+       0000-MAIN.
+              PERFORM 1000-INIT THRU 1000-EXIT.
+              PERFORM 2000-PROCESS THRU 2000-EXIT UNTIL
+                           88-EOF.
+              PERFORM 3000-CLOSE THRU 3000-EXIT.
+              STOP RUN.             
+       1000-INIT.
+              OPEN INPUT EMP-FILE.
+              IF W01-EMP-STAT NOT = '00'
+               DISPLAY 'UNABLE TO OPEN W01-SEQ-FS'.
+                                
+              OPEN INPUT MASTER-FILE.
+              IF W01-ACCT-STAT NOT = '00'
+               DISPLAY 'UNABLE TO OPEN ACCT FILE :' W01-ACCT-STAT
+                STOP RUN.
+                              
+               OPEN OUTPUT REPORT-FILE.
+               IF W05-REP-FS NOT = '00'
+                  DISPLAY 'UNABLE TO CREATE REPORT FILE'.
+                  
+         
+               PERFORM 1100-ACCEPT THRU 1100-EXIT.
+               PERFORM 1200-READ THRU 1200-EXIT.
+               PERFORM 1300-PROCESS THRU 1300-EXIT.
+               PERFORM 1400-READ-SEQ THRU 1400-EXIT.       
+      
+               
+       1000-EXIT.
+               EXIT.                                       
+                                                           
+       1100-ACCEPT.                                                         
+           DISPLAY 'ENTER THE CITY'.
+           ACCEPT CITY.
+           MOVE CITY TO LOC-CITY.                                     
+          
+       1100-EXIT.                                                               
+            EXIT.                                                               
+
+        1200-READ.                                                       
+               READ MASTER-FILE
+               INVALID KEY
+               MOVE 'N' TO W02-FOUND
+               DISPLAY 'ACCT NO NOT EXIT'
+               STOP RUN.
+               IF 88-FOUND
+               MOVE LOC-CODE TO T-LOC-CODE , T-CODE. 
+       1200-EXIT.                                                               
+           EXIT.                                                                
+
+       1300-PROCESS.                                                            
+           
+           MOVE LOC-CODE TO T-LOC-CODE , T-CODE.                            
+            
+           WRITE REPORT-REC FROM H01-HEAD.                                 
+           WRITE REPORT-REC FROM H02-HEAD.
+                                                                           
+       1300-EXIT.                                                               
+           EXIT.                                                                
+
+       1400-READ-SEQ.                                                         
+           READ EMP-FILE 
+           AT END                                    
+           MOVE 'N' TO W01-EOF.                             
+          
+       1400-EXIT.                                                               
+           EXIT.                                                                
+       1500-TEMP-GROUP.
+             
+           MOVE EMP-GROUP TO TEMP-GRP , S-GRP.
+           WRITE REPORT-REC FROM H03-HEAD.
+          
+       1500-EXIT.
+           EXIT.
+
+       2000-PROCESS.                                                         
+              IF EMP-LOC = T-LOC-CODE
+      *                                
+               PERFORM 1500-TEMP-GROUP THRU 1500-EXIT
+               PERFORM 2001-PROCESS
+                      
+             ELSE                                  
+             PERFORM 1400-READ-SEQ THRU 1400-EXIT.
+
+       2000-EXIT.                                                            
+           EXIT.                                                                
+       2001-PROCESS.
+                 
+                 IF EMP-GROUP NOT = TEMP-GRP
+                  PERFORM 1500-TEMP-GROUP THRU 1500-EXIT.      
+                                                          
+                MOVE EMP-CODE TO EMPCODE1                                 
+                MOVE EMP-NAME TO EMPNAME1      
+                MOVE EMP-DESG TO EMPDESIGN               
+                                                                     
+               PERFORM 2100-HEAD THRU 2100-EXIT                             
+               PERFORM 1400-READ-SEQ THRU 1400-EXIT.  
+       2100-HEAD.
+           WRITE REPORT-REC FROM H04-HEAD.
+           WRITE REPORT-REC FROM H05-HEAD.
+       2100-EXIT.
+            EXIT.
+       3000-CLOSE.
+           CLOSE EMP-FILE.
+           CLOSE MASTER-FILE.
+       3000-EXIT.
+            EXIT.
+            
